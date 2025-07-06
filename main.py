@@ -1,69 +1,13 @@
-
-async def handle_config_type(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data['config_type'] = update.message.text
-    await update.message.reply_text("مدت اشتراک را انتخاب کنید:", reply_markup=ReplyKeyboardMarkup([
-        ["یک ماهه"], ["سه ماهه"], ["شش ماهه"]
-    ], resize_keyboard=True))
-    return SELECT_DURATION
-
-async def handle_duration(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data['duration'] = update.message.text
-    await update.message.reply_text("حجم اشتراک را انتخاب کنید:", reply_markup=ReplyKeyboardMarkup([
-        ["10گیگ"], ["30گیگ"], ["50گیگ"], ["80گیگ"], ["120گیگ"]
-    ], resize_keyboard=True))
-    return SELECT_GIG
-
-async def handle_gig(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    gig = update.message.text
-    info = context.user_data
-    summary = f"🛒 سفارش جدید از {update.effective_user.full_name}:\n📦 نوع: {info['config_type']}\n⏳ مدت: {info['duration']}\n💾 حجم: {gig}"
-    for admin in admin_ids:
-        await context.bot.send_message(admin, summary)
-    await context.bot.send_message(chat_id=admin_group_id, text=summary)
-    await update.message.reply_text("✅ درخواست ثبت شد. پس از تایید پشتیبانی، کانفیگ برای شما ارسال می‌شود.", reply_markup=main_menu_buttons)
-    return MAIN_MENU
-
-def start_bot():
-    import asyncio
-    import nest_asyncio
-    nest_asyncio.apply()
-
-    app = ApplicationBuilder().token("7402415396:AAGzssuEw0REEx8yw7b2iZqZtoFsMBQUEV8").build()
-
-    conv_handler = ConversationHandler(
-        entry_points=[CommandHandler('start', start)],
-        states={
-            NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_name)],
-            PHONE: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_phone)],
-            SIM_TYPE: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_sim_type)],
-            MAIN_MENU: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_main_menu)],
-            FEEDBACK: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_feedback)],
-            SELECT_CONFIG_TYPE: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_config_type)],
-            SELECT_DURATION: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_duration)],
-            SELECT_GIG: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_gig)]
-        },
-        fallbacks=[]
-    )
-    app.add_handler(conv_handler)
-
-    asyncio.run(app.run_polling())
-
-# اجرای ربات در یک Thread جدا
-threading.Thread(target=start_bot).start()
-
-# اجرای وب سرور FastAPI
-if name == "main":
-    uvicorn.run(web_app, host="0.0.0.0", port=10000)
-
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import (
     ApplicationBuilder, CommandHandler, MessageHandler,
     filters, ContextTypes, ConversationHandler
 )
-
 from fastapi import FastAPI
 import threading
 import uvicorn
+import nest_asyncio
+import asyncio
 
 # ساخت اپلیکیشن FastAPI برای باز کردن پورت
 web_app = FastAPI()
@@ -146,3 +90,54 @@ async def handle_feedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(chat_id=admin_group_id, text=msg)
     await update.message.reply_text("✅ پیام شما با موفقیت ارسال شد. از همراهی شما سپاسگزاریم.", reply_markup=main_menu_buttons)
     return MAIN_MENU
+
+async def handle_config_type(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data['config_type'] = update.message.text
+    await update.message.reply_text("مدت اشتراک را انتخاب کنید:", reply_markup=ReplyKeyboardMarkup([
+        ["یک ماهه"], ["سه ماهه"], ["شش ماهه"]
+    ], resize_keyboard=True))
+    return SELECT_DURATION
+
+async def handle_duration(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data['duration'] = update.message.text
+    await update.message.reply_text("حجم اشتراک را انتخاب کنید:", reply_markup=ReplyKeyboardMarkup([
+        ["10گیگ"], ["30گیگ"], ["50گیگ"], ["80گیگ"], ["120گیگ"]
+    ], resize_keyboard=True))
+    return SELECT_GIG
+
+async def handle_gig(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    gig = update.message.text
+    info = context.user_data
+    summary = f"🛒 سفارش جدید از {update.effective_user.full_name}:\n📦 نوع: {info['config_type']}\n⏳ مدت: {info['duration']}\n💾 حجم: {gig}"
+    for admin in admin_ids:
+        await context.bot.send_message(admin, summary)
+    await context.bot.send_message(chat_id=admin_group_id, text=summary)
+    await update.message.reply_text("✅ درخواست ثبت شد. پس از تایید پشتیبانی، کانفیگ برای شما ارسال می‌شود.", reply_markup=main_menu_buttons)
+    return MAIN_MENU
+
+def start_bot():
+    app = ApplicationBuilder().token("7402415396:AAGzssuEw0REEx8yw7b2iZqZtoFsMBQUEV8").build()
+    conv_handler = ConversationHandler(
+        entry_points=[CommandHandler('start', start)],
+        states={
+            NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_name)],
+            PHONE: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_phone)],
+            SIM_TYPE: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_sim_type)],
+            MAIN_MENU: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_main_menu)],
+            FEEDBACK: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_feedback)],
+            SELECT_CONFIG_TYPE: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_config_type)],
+            SELECT_DURATION: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_duration)],
+            SELECT_GIG: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_gig)]
+        },
+        fallbacks=[]
+    )
+    app.add_handler(conv_handler)
+    app.run_polling()
+
+def run_all():
+    nest_asyncio.apply()
+    threading.Thread(target=start_bot).start()
+    uvicorn.run(web_app, host="0.0.0.0", port=10000)
+
+if __name__ == "__main__":
+    run_all()
