@@ -1,4 +1,4 @@
-Baba:
+
 async def handle_config_type(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['config_type'] = update.message.text
     await update.message.reply_text("مدت اشتراک را انتخاب کنید:", reply_markup=ReplyKeyboardMarkup([
