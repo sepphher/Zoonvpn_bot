@@ -5,25 +5,21 @@ from telegram.ext import (
 )
 from fastapi import FastAPI
 import threading
-import uvicorn
 import nest_asyncio
 import asyncio
+import uvicorn
 
-# ساخت اپلیکیشن FastAPI برای باز کردن پورت
-web_app = FastAPI()
-
-@web_app.get("/")
-def root():
-    return {"status": "Bot is running!"}
-
-# مرحله‌های گرفتن اطلاعات
-NAME, PHONE, SIM_TYPE, MAIN_MENU, FEEDBACK, BUY_CONFIG, SELECT_CONFIG_TYPE, SELECT_DURATION, SELECT_GIG = range(9)
-
-# اطلاعات کاربران ذخیره می‌شه اینجا
-user_data_store = {}
+# اطلاعات مدیران و گروه
 admin_ids = [869171965, 7608339076]
 admin_group_id = -1002740658219
 
+# حالت‌ها برای ConversationHandler
+NAME, PHONE, SIM_TYPE, MAIN_MENU, FEEDBACK, BUY_CONFIG, SELECT_CONFIG_TYPE, SELECT_DURATION, SELECT_GIG = range(9)
+
+# ذخیره‌سازی اطلاعات کاربران
+user_data_store = {}
+
+# منوی اصلی
 main_menu_buttons = ReplyKeyboardMarkup([
     ["حساب کاربری من", "خرید کانفیگ جدید"],
     ["بررسی کانفینگ فعلی", "تست کانفینگ"],
@@ -31,6 +27,7 @@ main_menu_buttons = ReplyKeyboardMarkup([
     ["کانال ZONVPN"]
 ], resize_keyboard=True)
 
+# دستورات ربات
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("سلام به زون شاپ خوش آمدید \nلطفاً نام و نام خانوادگی خودتون رو ارسال کنید:")
     return NAME
@@ -51,10 +48,7 @@ async def get_sim_type(update: Update, context: ContextTypes.DEFAULT_TYPE):
     info = user_data_store[user.id]
     msg = f"🔔 کاربر جدید:\n👤 نام: {info['name']}\n📱 شماره: {info['phone']}\n🌐 نوع اینترنت: {info['sim']}"
     for admin in admin_ids:
-        try:
-            await context.bot.send_message(admin, msg)
-        except:
-            pass
+        await context.bot.send_message(admin, msg)
     await context.bot.send_message(chat_id=admin_group_id, text=msg)
     await update.message.reply_text("از منوی زیر گزینه مورد نظر خود را انتخاب کنید:", reply_markup=main_menu_buttons)
     return MAIN_MENU
@@ -115,7 +109,8 @@ async def handle_gig(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("✅ درخواست ثبت شد. پس از تایید پشتیبانی، کانفیگ برای شما ارسال می‌شود.", reply_markup=main_menu_buttons)
     return MAIN_MENU
 
-def start_bot():
+# اجرای ربات
+async def bot_main():
     app = ApplicationBuilder().token("7402415396:AAGzssuEw0REEx8yw7b2iZqZtoFsMBQUEV8").build()
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start)],
@@ -127,17 +122,25 @@ def start_bot():
             FEEDBACK: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_feedback)],
             SELECT_CONFIG_TYPE: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_config_type)],
             SELECT_DURATION: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_duration)],
-            SELECT_GIG: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_gig)]
+            SELECT_GIG: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_gig)],
         },
         fallbacks=[]
     )
     app.add_handler(conv_handler)
-    app.run_polling()
+    await app.run_polling()
 
-def run_all():
+# اجرا در Thread جدا
+def run_bot():
     nest_asyncio.apply()
-    threading.Thread(target=start_bot).start()
-    uvicorn.run(web_app, host="0.0.0.0", port=10000)
+    asyncio.get_event_loop().create_task(bot_main())
+
+# اجرای FastAPI
+web_app = FastAPI()
+
+@web_app.get("/")
+def read_root():
+    return {"status": "Bot is running!"}
 
 if __name__ == "__main__":
-    run_all()
+    threading.Thread(target=run_bot).start()
+    uvicorn.run(web_app, host="0.0.0.0", port=10000)
